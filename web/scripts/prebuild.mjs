@@ -7,6 +7,40 @@ function areaId(nombre) {
   return crypto.createHash("sha256").update(nombre, "utf8").digest("base64url").slice(0, 22);
 }
 
+/** Texto del nombre de archivo sin acentos, minúsculas, para reglas. */
+function stemToAsciiLower(stem) {
+  return stem
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Excluye fotos que no son retrato de una sola persona (equipo, grupal, genéricas de cámara, etc.).
+ */
+function isPersonLikeImage(stem) {
+  const raw = stem.trim();
+  const t = stemToAsciiLower(stem);
+  if (t.length < 2) return false;
+  if (/^img[_-]?\d+$/i.test(raw)) return false;
+  if (/^dsc[_-]?\d+$/i.test(raw)) return false;
+  if (/^photo[_-]?\d+$/i.test(raw)) return false;
+  if (/^p\d{3,}$/i.test(raw)) return false;
+  if (t === "hard" || t === "soft") return false;
+  if (t.includes("equipo")) return false;
+  if (t.includes("grupal")) return false;
+  if (/\bgrupos?\b/i.test(t)) return false;
+  if (t.includes("foto grupal") || t.includes("fotos grupal")) return false;
+  if (t.includes("foto de equipo") || t.includes("fotos de equipo")) return false;
+  if (/\bteam\b/i.test(t)) return false;
+  if (t.includes("plantel") || t.includes("staff only")) return false;
+  if (t.includes("mesa grupal") || t.includes("foto de grupo")) return false;
+  if (t.includes("collective") || t.includes("group photo")) return false;
+  return true;
+}
+
 /** Clave estable por persona: ignora (1), (2), puntos finales raros, mayúsculas. */
 function normalizePersonKey(stem) {
   let s = stem.trim().toLowerCase().replace(/\s+/g, " ");
@@ -140,6 +174,7 @@ for (const ent of fs.readdirSync(srcDir, { withFileTypes: true })) {
     if (!IMG.test(f.name)) continue;
     const file = f.name;
     const base = path.basename(file, path.extname(file));
+    if (!isPersonLikeImage(base)) continue;
     raw.push({ file, nombre: base });
   }
   const personas = dedupePersonas(raw);
