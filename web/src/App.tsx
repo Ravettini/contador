@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { exportVisitasToExcel } from "./lib/exportVisitasExcel";
 import { getSupabase } from "./lib/supabase";
+import { formatWeekRangeEs, weekStartMondayISO } from "./lib/week";
 
 type Persona = { file: string; nombre: string };
 type Area = { id: string; nombre: string; personas: Persona[] };
@@ -60,8 +61,9 @@ function Home({ manifest }: { manifest: Manifest | null }) {
         </button>
       </div>
       <p className="export-hint muted">
-        Descarga un .xlsx con todas las áreas y personas, visitas por fila y una hoja de resumen por área.
-        {!getSupabase() ? " Sin Supabase las visitas salen en 0." : ""}
+        Descarga un .xlsx con el histórico por semana (lunes a domingo, hora Argentina), resumen por área y
+        totales por semana.
+        {!getSupabase() ? " Sin Supabase el archivo sale vacío de conteos." : ""}
       </p>
       <ul className="grid">
         {manifest.areas.map((a) => (
@@ -141,6 +143,9 @@ function VisitModal({
   onClose: () => void;
 }) {
   const supabase = getSupabase();
+  const weekStart = useMemo(() => weekStartMondayISO(), [areaNombre, persona.file]);
+  const weekLabel = useMemo(() => formatWeekRangeEs(weekStart), [weekStart]);
+
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,15 +160,16 @@ function VisitModal({
     }
     setLoading(true);
     const { data, error } = await supabase
-      .from("visitas_imprevisto")
+      .from("visitas_imprevisto_semanal")
       .select("visitas")
       .eq("area_name", areaNombre)
       .eq("file_name", persona.file)
+      .eq("week_start", weekStart)
       .maybeSingle();
     if (error) setErr(error.message);
     setCount(typeof data?.visitas === "number" ? data.visitas : 0);
     setLoading(false);
-  }, [supabase, areaNombre, persona.file]);
+  }, [supabase, areaNombre, persona.file, weekStart]);
 
   useEffect(() => {
     void load();
@@ -173,13 +179,14 @@ function VisitModal({
     if (!supabase) return;
     setSaving(true);
     setErr(null);
-    const { error } = await supabase.from("visitas_imprevisto").upsert(
+    const { error } = await supabase.from("visitas_imprevisto_semanal").upsert(
       {
         area_name: areaNombre,
         file_name: persona.file,
+        week_start: weekStart,
         visitas: next,
       },
-      { onConflict: "area_name,file_name" },
+      { onConflict: "area_name,file_name,week_start" },
     );
     if (error) setErr(error.message);
     setSaving(false);
@@ -201,6 +208,12 @@ function VisitModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="modal-title">Visitas de improvisto</h2>
+        <p className="muted" style={{ margin: "-0.35rem 0 0.5rem", fontSize: "0.88rem" }}>
+          Semana calendario: {weekLabel}
+        </p>
+        <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.8rem" }}>
+          El contador es solo de esta semana (cada lunes en Argentina arranca una nueva).
+        </p>
         <img src={imageUrl(areaNombre, persona.file)} alt="" />
         <p style={{ margin: "0 0 0.75rem", fontWeight: 600 }}>{persona.nombre}</p>
         {!supabase ? (
