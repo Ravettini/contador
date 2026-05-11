@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { exportVisitasToExcel } from "./lib/exportVisitasExcel";
+import { fetchAllSemanalRows, topPersonasPorVisitasTotales } from "./lib/semanalData";
 import { getSupabase } from "./lib/supabase";
 import { formatWeekRangeEs, weekStartMondayISO } from "./lib/week";
 
@@ -20,8 +21,39 @@ function imageUrl(areaNombre: string, file: string): string {
   return assetUrl(`imagenes_comprimidas/${seg}`);
 }
 
+type TopEntry = {
+  rank: number;
+  nombre: string;
+  areaNombre: string;
+  areaId: string | undefined;
+  file: string;
+  total: number;
+};
+
 function Home({ manifest }: { manifest: Manifest | null }) {
   const [exporting, setExporting] = useState(false);
+  const [top5, setTop5] = useState<TopEntry[] | null>(null);
+  const [topLoading, setTopLoading] = useState(false);
+  const [topErr, setTopErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!manifest?.areas.length) return;
+    const sb = getSupabase();
+    if (!sb) {
+      setTop5(null);
+      setTopErr(null);
+      return;
+    }
+    setTopLoading(true);
+    setTopErr(null);
+    fetchAllSemanalRows(sb)
+      .then((rows) => setTop5(topPersonasPorVisitasTotales(rows, manifest, 5)))
+      .catch((e: unknown) => {
+        setTop5(null);
+        setTopErr(e instanceof Error ? e.message : "No se pudo cargar el ranking.");
+      })
+      .finally(() => setTopLoading(false));
+  }, [manifest]);
 
   if (manifest === null) {
     return (
@@ -74,6 +106,41 @@ function Home({ manifest }: { manifest: Manifest | null }) {
           </li>
         ))}
       </ul>
+
+      <section className="top5-section" aria-labelledby="top5-title">
+        <h2 id="top5-title">Top 5 — más pedidos (visitas de improvisto)</h2>
+        <p className="top5-sub muted">
+          Total acumulado en todas las semanas. Tocá el nombre para abrir el área de esa persona.
+        </p>
+        {!getSupabase() ? (
+          <p className="muted">Conectá Supabase para ver el ranking.</p>
+        ) : topLoading ? (
+          <p className="muted">Cargando ranking…</p>
+        ) : topErr ? (
+          <p className="banner">{topErr}</p>
+        ) : !top5?.length ? (
+          <p className="muted">Todavía no hay visitas registradas.</p>
+        ) : (
+          <ol className="top5-list">
+            {top5.map((row) => (
+              <li key={`${row.areaNombre}\0${row.file}`} className="top5-item">
+                <span className="top5-rank">{row.rank}</span>
+                <div className="top5-body">
+                  {row.areaId ? (
+                    <Link className="top5-name" to={`/area/${row.areaId}`}>
+                      {row.nombre}
+                    </Link>
+                  ) : (
+                    <span className="top5-name">{row.nombre}</span>
+                  )}
+                  <span className="top5-area">{row.areaNombre}</span>
+                </div>
+                <span className="top5-count">{row.total}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </div>
   );
 }

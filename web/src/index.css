@@ -226,3 +226,92 @@ h1 {
   color: #64748b;
   font-size: 0.9rem;
 }
+
+.top5-section {
+  margin-top: 2.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.top5-section h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+
+.top5-sub {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+}
+
+.top5-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 520px;
+}
+
+.top5-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+
+.top5-rank {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #0d9488;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.top5-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.top5-name {
+  font-weight: 700;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.top5-name:hover {
+  color: #0d9488;
+  text-decoration: underline;
+}
+
+span.top5-name {
+  cursor: default;
+}
+
+.top5-area {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.top5-count {
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #0f766e;
+  min-width: 2rem;
+  text-align: right;
+}

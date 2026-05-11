@@ -1,48 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllSemanalRows, personaNombreEnManifest, type ManifestLike } from "./semanalData";
 
-export type ManifestForExport = {
-  areas: { nombre: string; personas: { nombre: string; file: string }[] }[];
-};
-
-type SemanalRow = {
-  area_name: string;
-  file_name: string;
-  week_start: string;
-  visitas: number;
-};
-
-function personaNombre(manifest: ManifestForExport, area: string, file: string): string {
-  const a = manifest.areas.find((x) => x.nombre === area);
-  return a?.personas.find((p) => p.file === file)?.nombre ?? file;
-}
-
-async function fetchAllSemanal(supabase: SupabaseClient) {
-  const pageSize = 1000;
-  let from = 0;
-  const all: SemanalRow[] = [];
-  for (;;) {
-    const { data, error } = await supabase
-      .from("visitas_imprevisto_semanal")
-      .select("area_name, file_name, week_start, visitas")
-      .order("area_name", { ascending: true })
-      .order("file_name", { ascending: true })
-      .order("week_start", { ascending: true })
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    if (!data?.length) break;
-    for (const row of data) {
-      all.push({
-        area_name: row.area_name as string,
-        file_name: row.file_name as string,
-        week_start: String(row.week_start),
-        visitas: Number(row.visitas) || 0,
-      });
-    }
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
-}
+export type ManifestForExport = ManifestLike;
 
 /**
  * Excel: detalle por semana, resumen por área (histórico), totales por semana calendario.
@@ -51,11 +10,11 @@ export async function exportVisitasToExcel(
   manifest: ManifestForExport,
   supabase: SupabaseClient | null
 ): Promise<void> {
-  const semanal: SemanalRow[] = supabase ? await fetchAllSemanal(supabase) : [];
+  const semanal = supabase ? await fetchAllSemanalRows(supabase) : [];
 
   const detalle: Record<string, string | number>[] = semanal.map((r) => ({
     Área: r.area_name,
-    Persona: personaNombre(manifest, r.area_name, r.file_name),
+    Persona: personaNombreEnManifest(manifest, r.area_name, r.file_name),
     "Archivo foto": r.file_name,
     "Semana (inicio lunes)": r.week_start,
     "Visitas (esa semana)": r.visitas,
