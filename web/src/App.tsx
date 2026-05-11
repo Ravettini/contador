@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { exportVisitasToExcel } from "./lib/exportVisitasExcel";
 import { getSupabase } from "./lib/supabase";
 
 type Persona = { file: string; nombre: string };
@@ -19,6 +20,8 @@ function imageUrl(areaNombre: string, file: string): string {
 }
 
 function Home({ manifest }: { manifest: Manifest | null }) {
+  const [exporting, setExporting] = useState(false);
+
   if (manifest === null) {
     return (
       <div className="wrap">
@@ -36,9 +39,30 @@ function Home({ manifest }: { manifest: Manifest | null }) {
       </div>
     );
   }
+
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      await exportVisitasToExcel(manifest, getSupabase());
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "No se pudo generar el Excel.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="wrap">
-      <h1>Áreas</h1>
+      <div className="toolbar-row">
+        <h1>Áreas</h1>
+        <button type="button" className="btn-export" disabled={exporting} onClick={() => void handleExportExcel()}>
+          {exporting ? "Generando…" : "Exportar Excel"}
+        </button>
+      </div>
+      <p className="export-hint muted">
+        Descarga un .xlsx con todas las áreas y personas, visitas por fila y una hoja de resumen por área.
+        {!getSupabase() ? " Sin Supabase las visitas salen en 0." : ""}
+      </p>
       <ul className="grid">
         {manifest.areas.map((a) => (
           <li key={a.id}>
