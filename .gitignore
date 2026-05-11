@@ -1,0 +1,9 @@
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+web/.next/
+web/public/imagenes_comprimidas/
+web/public/manifest.json
+.DS_Store
+Thumbs.db
