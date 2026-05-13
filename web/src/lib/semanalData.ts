@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { weekStartMondayISO } from "./week";
 
 export type SemanalRow = {
   area_name: string;
@@ -37,6 +38,36 @@ export async function fetchAllSemanalRows(supabase: SupabaseClient): Promise<Sem
     from += pageSize;
   }
   return all;
+}
+
+/** Suma `delta` al contador de la semana calendario actual (lunes Argentina en curso). */
+export async function incrementVisitaSemanaActual(
+  supabase: SupabaseClient,
+  areaNombre: string,
+  fileName: string,
+  delta: number,
+): Promise<void> {
+  const weekStart = weekStartMondayISO();
+  const { data, error } = await supabase
+    .from("visitas_imprevisto_semanal")
+    .select("visitas")
+    .eq("area_name", areaNombre)
+    .eq("file_name", fileName)
+    .eq("week_start", weekStart)
+    .maybeSingle();
+  if (error) throw error;
+  const cur = typeof data?.visitas === "number" ? data.visitas : 0;
+  const next = Math.max(0, cur + delta);
+  const { error: upErr } = await supabase.from("visitas_imprevisto_semanal").upsert(
+    {
+      area_name: areaNombre,
+      file_name: fileName,
+      week_start: weekStart,
+      visitas: next,
+    },
+    { onConflict: "area_name,file_name,week_start" },
+  );
+  if (upErr) throw upErr;
 }
 
 export function personaNombreEnManifest(manifest: ManifestLike, area: string, file: string): string {

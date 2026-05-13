@@ -227,24 +227,24 @@ h1 {
   font-size: 0.9rem;
 }
 
-.top5-section {
+.top10-section {
   margin-top: 2.25rem;
   padding-top: 1.5rem;
   border-top: 1px solid #e2e8f0;
 }
 
-.top5-section h2 {
+.top10-section h2 {
   font-size: 1.15rem;
   font-weight: 700;
   margin: 0 0 0.35rem;
 }
 
-.top5-sub {
+.top10-sub {
   margin: 0 0 1rem;
   font-size: 0.88rem;
 }
 
-.top5-list {
+.top10-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -254,7 +254,7 @@ h1 {
   max-width: 520px;
 }
 
-.top5-item {
+.top10-item {
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -265,7 +265,7 @@ h1 {
   box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
 }
 
-.top5-rank {
+.top10-rank {
   flex-shrink: 0;
   width: 1.75rem;
   height: 1.75rem;
@@ -279,7 +279,7 @@ h1 {
   font-size: 0.95rem;
 }
 
-.top5-body {
+.top10-body {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -287,27 +287,49 @@ h1 {
   gap: 0.15rem;
 }
 
-.top5-name {
+button.top10-name {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-weight: 700;
   color: #0f172a;
-  text-decoration: none;
-}
-
-.top5-name:hover {
-  color: #0d9488;
+  text-align: left;
+  cursor: pointer;
   text-decoration: underline;
+  text-decoration-color: transparent;
 }
 
-span.top5-name {
-  cursor: default;
+button.top10-name:hover:not(:disabled) {
+  color: #0d9488;
+  text-decoration-color: currentColor;
 }
 
-.top5-area {
+button.top10-name:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.top10-area {
   font-size: 0.85rem;
   color: #64748b;
 }
 
-.top5-count {
+.top10-area-link {
+  color: #0d9488;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.top10-area-link:hover {
+  text-decoration: underline;
+}
+
+.top10-count {
   flex-shrink: 0;
   font-weight: 800;
   font-size: 1.15rem;

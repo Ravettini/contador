@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { exportVisitasToExcel } from "./lib/exportVisitasExcel";
-import { fetchAllSemanalRows, topPersonasPorVisitasTotales } from "./lib/semanalData";
+import {
+  fetchAllSemanalRows,
+  incrementVisitaSemanaActual,
+  topPersonasPorVisitasTotales,
+} from "./lib/semanalData";
 import { getSupabase } from "./lib/supabase";
 import { formatWeekRangeEs, weekStartMondayISO } from "./lib/week";
 
@@ -32,28 +36,45 @@ type TopEntry = {
 
 function Home({ manifest }: { manifest: Manifest | null }) {
   const [exporting, setExporting] = useState(false);
-  const [top5, setTop5] = useState<TopEntry[] | null>(null);
+  const [top10, setTop10] = useState<TopEntry[] | null>(null);
   const [topLoading, setTopLoading] = useState(false);
   const [topErr, setTopErr] = useState<string | null>(null);
+  const [topSaving, setTopSaving] = useState(false);
 
   useEffect(() => {
     if (!manifest?.areas.length) return;
     const sb = getSupabase();
     if (!sb) {
-      setTop5(null);
+      setTop10(null);
       setTopErr(null);
       return;
     }
     setTopLoading(true);
     setTopErr(null);
     fetchAllSemanalRows(sb)
-      .then((rows) => setTop5(topPersonasPorVisitasTotales(rows, manifest, 5)))
+      .then((rows) => setTop10(topPersonasPorVisitasTotales(rows, manifest, 10)))
       .catch((e: unknown) => {
-        setTop5(null);
+        setTop10(null);
         setTopErr(e instanceof Error ? e.message : "No se pudo cargar el ranking.");
       })
       .finally(() => setTopLoading(false));
   }, [manifest]);
+
+  async function handleTopNameAdd(row: TopEntry) {
+    const sb = getSupabase();
+    if (!sb || !manifest?.areas.length || topSaving) return;
+    setTopSaving(true);
+    setTopErr(null);
+    try {
+      await incrementVisitaSemanaActual(sb, row.areaNombre, row.file, 1);
+      const rows = await fetchAllSemanalRows(sb);
+      setTop10(topPersonasPorVisitasTotales(rows, manifest, 10));
+    } catch (e: unknown) {
+      setTopErr(e instanceof Error ? e.message : "No se pudo guardar la visita.");
+    } finally {
+      setTopSaving(false);
+    }
+  }
 
   if (manifest === null) {
     return (
@@ -107,10 +128,10 @@ function Home({ manifest }: { manifest: Manifest | null }) {
         ))}
       </ul>
 
-      <section className="top5-section" aria-labelledby="top5-title">
-        <h2 id="top5-title">Top 5 — más pedidos (visitas de improvisto)</h2>
-        <p className="top5-sub muted">
-          Total acumulado en todas las semanas. Tocá el nombre para abrir el área de esa persona.
+      <section className="top10-section" aria-labelledby="top10-title">
+        <h2 id="top10-title">Top 10 — más pedidos (visitas de improvisto)</h2>
+        <p className="top10-sub muted">
+          Total acumulado en todas las semanas. Tocá el nombre para sumar 1 visita en la semana actual.
         </p>
         {!getSupabase() ? (
           <p className="muted">Conectá Supabase para ver el ranking.</p>
@@ -118,24 +139,37 @@ function Home({ manifest }: { manifest: Manifest | null }) {
           <p className="muted">Cargando ranking…</p>
         ) : topErr ? (
           <p className="banner">{topErr}</p>
-        ) : !top5?.length ? (
+        ) : !top10?.length ? (
           <p className="muted">Todavía no hay visitas registradas.</p>
         ) : (
-          <ol className="top5-list">
-            {top5.map((row) => (
-              <li key={`${row.areaNombre}\0${row.file}`} className="top5-item">
-                <span className="top5-rank">{row.rank}</span>
-                <div className="top5-body">
-                  {row.areaId ? (
-                    <Link className="top5-name" to={`/area/${row.areaId}`}>
-                      {row.nombre}
-                    </Link>
-                  ) : (
-                    <span className="top5-name">{row.nombre}</span>
-                  )}
-                  <span className="top5-area">{row.areaNombre}</span>
+          <ol className="top10-list">
+            {top10.map((row) => (
+              <li key={`${row.areaNombre}\0${row.file}`} className="top10-item">
+                <span className="top10-rank">{row.rank}</span>
+                <div className="top10-body">
+                  <button
+                    type="button"
+                    className="top10-name"
+                    title="Sumar 1 visita esta semana"
+                    disabled={topSaving}
+                    onClick={() => void handleTopNameAdd(row)}
+                  >
+                    {row.nombre}
+                  </button>
+                  <span className="top10-area">
+                    {row.areaId ? (
+                      <>
+                        {row.areaNombre} ·{" "}
+                        <Link className="top10-area-link" to={`/area/${row.areaId}`}>
+                          abrir área
+                        </Link>
+                      </>
+                    ) : (
+                      row.areaNombre
+                    )}
+                  </span>
                 </div>
-                <span className="top5-count">{row.total}</span>
+                <span className="top10-count">{row.total}</span>
               </li>
             ))}
           </ol>
